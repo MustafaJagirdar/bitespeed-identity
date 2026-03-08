@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Debug TypeScript",
+        "runtimeExecutable": "ts-node",
+        "args": ["src/index.ts"],
+        "cwd": "${workspaceFolder}",
+        "protocol": "inspector"
+      }
+    ]
+  }
+  ```
+  
+  Press **Cmd + S** to save.
+  
+  ---
+  
+  ## Now test it
+  
+  In the terminal run:
+  ```
+  npm run dev
+  ```
+  
+  You should see:
+  ```
+  Server running on port 3000
