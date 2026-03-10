@@ -86,6 +86,26 @@ function getRootPrimaryId(contact: Contact): number {
   return current.id;
 }
 
+// ── NEW: this merges two separate clusters into one ──────────────────────────
+function mergeClusters(winnerId: number, loserId: number): void {
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  // The loser primary becomes a secondary pointing at the winner
+  db.prepare(
+    `UPDATE Contact
+     SET linkPrecedence = 'secondary', linkedId = ?, updatedAt = ?
+     WHERE id = ?`
+  ).run(winnerId, now, loserId);
+
+  // All contacts that were pointing at the loser now point at the winner
+  db.prepare(
+    `UPDATE Contact
+     SET linkedId = ?, updatedAt = ?
+     WHERE linkedId = ?`
+  ).run(winnerId, now, loserId);
+}
+
 export function identifyContact(req: IdentifyRequest): IdentifyResponse {
   const email = req.email ?? null;
   const phoneNumber = req.phoneNumber ? String(req.phoneNumber) : null;
@@ -96,13 +116,16 @@ export function identifyContact(req: IdentifyRequest): IdentifyResponse {
 
   const matched = findByEmailOrPhone(email, phoneNumber);
 
+  // No existing contact — create a brand new primary
   if (matched.length === 0) {
     const newContact = createContact(email, phoneNumber, null, "primary");
     return buildResponse(newContact.id);
   }
 
+  // Find the root primary id for every matched contact
   const rootIds = new Set(matched.map(getRootPrimaryId));
 
+  // All matches belong to the same cluster — no merge needed
   if (rootIds.size === 1) {
     const primaryId = [...rootIds][0];
     const cluster = findCluster(primaryId);
@@ -120,17 +143,29 @@ export function identifyContact(req: IdentifyRequest): IdentifyResponse {
     return buildResponse(primaryId);
   }
 
+  // Matches span TWO separate clusters — merge them!
+  // The cluster created earliest wins and stays primary
   const db = getDb();
   const primaries = [...rootIds].map(
     (id) =>
       db.prepare(`SELECT * FROM Contact WHERE id = ?`).get(id) as Contact
   );
+
+  // Sort by creation date — oldest first
   primaries.sort(
     (a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
   );
 
-  return buildResponse(primaries[0].id);
+  const winner = primaries[0];
+  const losers = primaries.slice(1);
+
+  // Merge every losing cluster into the winner
+  for (const loser of losers) {
+    mergeClusters(winner.id, loser.id);
+  }
+
+  return buildResponse(winner.id);
 }
 
 function buildResponse(primaryId: number): IdentifyResponse {
