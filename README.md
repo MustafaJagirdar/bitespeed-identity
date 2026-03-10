@@ -1,2 +1,20 @@
-# bitespeed-identity
-This project builds a backend API that links customer identities across multiple orders using shared email or phone numbers. The /identify endpoint checks existing records, merges related contacts under a primary contact, creates secondary ones when needed, and returns a unified profile of all emails, numbers, and linked IDs.
+# Bitespeed Identity Reconciliation
+
+## Live Endpoint
+POST https://bitespeed-identity-xofb.onrender.com/identify
+
+## How to test
+curl -X POST https://bitespeed-identity-xofb.onrender.com/identify \
+  -H "Content-Type: application/json" \
+  -d '{"email":"lorraine@hillvalley.edu","phoneNumber":"123456"}'
+
+## Tech Stack
+- Node.js + TypeScript
+- Express
+- SQLite (better-sqlite3)
+
+## How it works
+- Links customer contacts by shared email or phone number
+- Oldest contact is always the primary
+- New info on existing contact creates a secondary
+- Two separate clusters get merged when a request links them
