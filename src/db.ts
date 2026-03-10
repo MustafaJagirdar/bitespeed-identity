@@ -1,16 +1,22 @@
 import Database from "better-sqlite3";
 import path from "path";
+import fs from "fs";
 
-// This is where your database file will be saved
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, "../data/contacts.db");
 
 let db: Database.Database;
 
 export function initDb(): Database.Database {
   const BetterSqlite3 = require("better-sqlite3");
+
+  // Automatically create the data folder if it doesn't exist
+  const dir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
   db = new BetterSqlite3(DB_PATH);
 
-  // This creates the Contact table if it doesn't exist yet
   db.exec(`
     CREATE TABLE IF NOT EXISTS Contact (
       id             INTEGER PRIMARY KEY AUTOINCREMENT,
